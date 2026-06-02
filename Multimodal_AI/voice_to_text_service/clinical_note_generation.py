@@ -6,7 +6,7 @@ import spacy
 from utils.logger import logger
 
 # Import response model
-from text_to_voice_service.voice_response import (
+from voice_to_text_service.voice_response import (
     ClinicalNoteResponse
 )
 
