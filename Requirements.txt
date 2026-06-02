@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+openai-whisper
+torch
+torchaudio
+torchvision
+easyocr
+opencv-python
+pillow
+numpy
+python-multipart
+pydantic
+textblob
+python-dotenv
