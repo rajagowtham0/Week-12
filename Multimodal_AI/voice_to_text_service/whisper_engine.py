@@ -1,7 +1,15 @@
 import os
+from dotenv import load_dotenv
 
-# Local FFmpeg Path
-os.environ["PATH"] += os.pathsep + r"C:\ffmpeg\bin"
+load_dotenv()
+# using the environment variable
+ffmpeg_path = os.getenv(
+    "FFMPEG_PATH"
+)
+print(
+    "FFMPEG Path:",
+    os.getenv("FFMPEG_PATH")
+)
 
 # Import Whisper
 import whisper
