@@ -16,14 +16,16 @@ from voice_to_text_service.voice_response import (
 )
 
 # Load environment variables from .env file
+
 load_dotenv()
 
-# Read FFmpeg path from environment variable
-ffmpeg_path = os.getenv(
-    "FFMPEG_PATH"
+ffmpeg_path = r"C:\ffmpeg\bin"
+
+os.environ["PATH"] += (
+    os.pathsep +
+    ffmpeg_path
 )
 
-# Log configured FFmpeg path
 logger.info(
     f"FFMPEG Path: {ffmpeg_path}"
 )

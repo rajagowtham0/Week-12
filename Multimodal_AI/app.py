@@ -12,12 +12,12 @@ import os
 from utils.logger import logger
 
 # Import Whisper voice-to-text service
-from text_to_voice_service.whisper_engine import (
+from voice_to_text_service.whisper_engine import (
     transcribe_audio
 )
 
 # Import Clinical Note Generation service
-from text_to_voice_service.clinical_note_generation import (
+from voice_to_text_service.clinical_note_generation import (
     generate_clinical_note
 )
 
