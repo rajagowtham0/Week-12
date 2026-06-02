@@ -6,7 +6,6 @@ from typing import List
 # Voice-to-Text Response Model
 # Used by:
 # POST /speech-to-text
-#
 # Stores:
 # 1. Detected language
 # 2. Original transcription
@@ -25,9 +24,7 @@ class VoiceTranscriptionResponse(
 # Clinical Note Response Model
 # Used by:
 # POST /clinical-note-from-voice
-#
-# Stores extracted clinical information
-# from the translated speech text.
+# Stores extracted clinical information from the translated speech text.
 class ClinicalNoteResponse(
     BaseModel
 ):
