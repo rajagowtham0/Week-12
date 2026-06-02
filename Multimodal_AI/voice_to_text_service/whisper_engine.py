@@ -1,98 +1,183 @@
+# Import operating system utilities
 import os
+
+# Load environment variables
 from dotenv import load_dotenv
 
+# Import Whisper model
+import whisper
+
+# Import logger
+from utils.logger import logger
+
+# Import Pydantic response model
+from voice_to_text_service.voice_response import (
+    VoiceTranscriptionResponse
+)
+
+# Load environment variables from .env file
 load_dotenv()
-# using the environment variable
+
+# Read FFmpeg path from environment variable
 ffmpeg_path = os.getenv(
     "FFMPEG_PATH"
 )
-print(
-    "FFMPEG Path:",
-    os.getenv("FFMPEG_PATH")
+
+# Log configured FFmpeg path
+logger.info(
+    f"FFMPEG Path: {ffmpeg_path}"
 )
 
-# Import Whisper
-import whisper
+# Load Whisper model
+logger.info(
+    "Loading Whisper model..."
+)
 
-# Load Whisper Model
-print("Loading Whisper model...")
+# Medium model provides good multilingual accuracy
+model = whisper.load_model(
+    "medium"
+)
 
-# Medium model gives very good multilingual accuracy
-model = whisper.load_model("medium")
+logger.info(
+    "Whisper model loaded successfully"
+)
 
-print("Whisper model loaded successfully")
-
-# Language Mapping
+# Supported language mapping
 LANGUAGE_MAP = {
+
     "en": "English",
+
     "te": "Telugu",
+
     "hi": "Hindi",
+
     "ta": "Tamil",
+
     "ml": "Malayalam",
+
     "kn": "Kannada",
+
     "bn": "Bengali"
 }
 
 
 # Voice-to-Text Function
-def transcribe_audio(audio_path):
+# Performs:
+# 1. Language Detection
+# 2. Original Language Transcription
+# 3. English Translation
+def transcribe_audio(
+    audio_path
+) -> VoiceTranscriptionResponse:
 
     try:
 
-        # Original Language Transcription
+        logger.info(
+            f"Processing audio file: {audio_path}"
+        )
+
+        # Generate transcription in original language
         transcription_result = model.transcribe(
+
             audio_path,
+
             task="transcribe",
+
             fp16=False,
+
             temperature=0,
+
             beam_size=10,
+
             best_of=10,
+
             patience=2,
+
             condition_on_previous_text=True
         )
 
-        # English Translation
+        logger.info(
+            "Original language transcription completed"
+        )
+
+        # Generate English translation
         translation_result = model.transcribe(
+
             audio_path,
+
             task="translate",
+
             fp16=False,
+
             temperature=0,
+
             beam_size=10,
+
             best_of=10,
+
             patience=2,
+
             condition_on_previous_text=True
         )
 
-        # Extract Language Information
-        language_code = transcription_result["language"]
+        logger.info(
+            "English translation completed"
+        )
 
+        # Extract detected language code
+        language_code = (
+            transcription_result["language"]
+        )
+
+        # Convert language code to readable language name
         language_name = LANGUAGE_MAP.get(
+
             language_code,
+
             "Unknown"
         )
 
-        # Structured Response
-        return {
+        logger.info(
+            f"Detected language: {language_name}"
+        )
 
-            "detected_language":
+        # Create structured response model
+        response = VoiceTranscriptionResponse(
+
+            detected_language=
                 language_name,
 
-            "original_transcription":
-                transcription_result["text"].strip(),
+            original_transcription=
+                transcription_result[
+                    "text"
+                ].strip(),
 
-            "english_translation":
-                translation_result["text"].strip()
-        }
+            english_translation=
+                translation_result[
+                    "text"
+                ].strip()
+        )
+
+        logger.info(
+            "Voice-to-text processing completed successfully"
+        )
+
+        return response
 
     except Exception as e:
 
-        return {
+        logger.error(
+            f"Voice processing error: {str(e)}"
+        )
 
-            "detected_language": "Unknown",
+        return VoiceTranscriptionResponse(
 
-            "original_transcription": "",
+            detected_language=
+                "Unknown",
 
-            "english_translation": "",
+            original_transcription=
+                "",
 
-            "error": str(e)
-        }
+            english_translation=
+                ""
+        )
