@@ -24,9 +24,66 @@ logger.info(
 )
 
 
+# Symptom Preprocessing Function
+# Converts symptom sentences into
+# cleaner symptom phrases using
+# spaCy noun phrase extraction
+def preprocess_symptoms(
+    symptom_sentences: list
+) -> list:
+
+    # Store processed symptoms
+    cleaned_symptoms = []
+
+    # Process each symptom sentence
+    for sentence in symptom_sentences:
+
+        # Apply spaCy NLP processing
+        symptom_doc = nlp(
+            sentence
+        )
+
+        # Extract noun phrases
+        for chunk in symptom_doc.noun_chunks:
+
+            symptom = (
+                chunk.text.strip()
+            )
+
+            # Ignore very short phrases
+            if len(symptom) < 3:
+
+                continue
+
+            # Ignore phrases containing numbers
+            # to avoid durations appearing as symptoms
+            if any(
+                char.isdigit()
+                for char in symptom
+            ):
+
+                continue
+
+            # Store symptom phrase
+            cleaned_symptoms.append(
+                symptom.title()
+            )
+
+    # Remove duplicate symptoms
+    cleaned_symptoms = list(
+
+        dict.fromkeys(
+            cleaned_symptoms
+        )
+    )
+
+    return cleaned_symptoms
+
+
 # Clinical Note Generation Function
 # Input:
 #   English translated text from Whisper
+#
 # Output:
 #   ClinicalNoteResponse
 def generate_clinical_note(
@@ -72,8 +129,8 @@ def generate_clinical_note(
         duration = ""
 
         symptoms = []
-        # Duration Extraction
 
+        # Duration Extraction
         duration_match = re.search(
 
             r'((?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+'
@@ -95,7 +152,6 @@ def generate_clinical_note(
             )
 
         # Chief Complaint Extraction
-
         noun_phrases = [
 
             chunk.text.strip()
@@ -122,16 +178,22 @@ def generate_clinical_note(
 
         # Symptom Extraction
 
+        # Store symptom-related sentences
+        symptom_sentences = []
+
         for sentence in doc.sents:
 
             sentence_text = (
                 sentence.text.strip()
             )
 
+            # Skip empty sentences
             if not sentence_text:
 
                 continue
 
+            # Skip sentence containing
+            # the extracted chief complaint
             if (
 
                 chief_complaint
@@ -146,16 +208,14 @@ def generate_clinical_note(
 
                 continue
 
-            symptoms.append(
+            symptom_sentences.append(
                 sentence_text
             )
 
-        # Remove duplicate symptom entries
-        symptoms = list(
-
-            dict.fromkeys(
-                symptoms
-            )
+        # Convert symptom sentences into
+        # cleaner symptom entities
+        symptoms = preprocess_symptoms(
+            symptom_sentences
         )
 
         logger.info(
