@@ -3,7 +3,7 @@ import os
 
 # Load environment variables
 from dotenv import load_dotenv
-
+from utils.config import (FFMPEG_PATH)
 # Import Whisper model
 import whisper
 
@@ -15,19 +15,16 @@ from voice_to_text_service.voice_response import (
     VoiceTranscriptionResponse
 )
 
-# Load environment variables from .env file
+# From utils.py, ffmpegpath is called
 
-load_dotenv()
-
-ffmpeg_path = r"C:\ffmpeg\bin"
-
+# Add FFmpeg to runtime PATH
 os.environ["PATH"] += (
     os.pathsep +
-    ffmpeg_path
+    FFMPEG_PATH
 )
 
 logger.info(
-    f"FFMPEG Path: {ffmpeg_path}"
+    f"FFMPEG Path: {FFMPEG_PATH}"
 )
 
 # Load Whisper model
