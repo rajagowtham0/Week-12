@@ -10,9 +10,9 @@ from voice_to_text_service.voice_response import (
     ClinicalNoteResponse
 )
 
-# Load spaCy English NLP model
+# Load spaCy model
 logger.info(
-    "Loading spaCy NLP model..."
+    "Loading spaCy model..."
 )
 
 nlp = spacy.load(
@@ -20,72 +20,124 @@ nlp = spacy.load(
 )
 
 logger.info(
-    "spaCy NLP model loaded successfully"
+    "spaCy model loaded successfully"
 )
 
 
-# Symptom Preprocessing Function
-# Converts symptom sentences into
-# cleaner symptom phrases using
-# spaCy noun phrase extraction
-def preprocess_symptoms(
-    symptom_sentences: list
-) -> list:
+# Preprocess clinical text
+# Removes narrative phrases while
+# preserving clinical meaning
+def preprocess_text(
+    text: str
+) -> str:
 
-    # Store processed symptoms
-    cleaned_symptoms = []
+    # Convert text to lowercase
+    text = text.lower()
 
-    # Process each symptom sentence
-    for sentence in symptom_sentences:
+    # Common narrative phrases
+    filler_phrases = [
 
-        # Apply spaCy NLP processing
-        symptom_doc = nlp(
-            sentence
+        "the patient",
+
+        "patient",
+
+        "has complained of",
+
+        "complains of",
+
+        "complained of",
+
+        "has been experiencing",
+
+        "reports",
+
+        "reported",
+
+        "experiencing",
+
+        "suffering from",
+
+        "states that",
+
+        "mentions"
+    ]
+
+    # Remove narrative phrases
+    for phrase in filler_phrases:
+
+        text = text.replace(
+            phrase,
+            " "
         )
 
-        # Extract noun phrases
-        for chunk in symptom_doc.noun_chunks:
+    # Remove extra spaces
+    text = re.sub(
 
-            symptom = (
-                chunk.text.strip()
-            )
+        r"\s+",
 
-            # Ignore very short phrases
-            if len(symptom) < 3:
+        " ",
 
-                continue
-
-            # Ignore phrases containing numbers
-            # to avoid durations appearing as symptoms
-            if any(
-                char.isdigit()
-                for char in symptom
-            ):
-
-                continue
-
-            # Store symptom phrase
-            cleaned_symptoms.append(
-                symptom.title()
-            )
-
-    # Remove duplicate symptoms
-    cleaned_symptoms = list(
-
-        dict.fromkeys(
-            cleaned_symptoms
-        )
+        text
     )
 
-    return cleaned_symptoms
+    return text.strip()
 
 
-# Clinical Note Generation Function
-# Input:
-#   English translated text from Whisper
-#
-# Output:
-#   ClinicalNoteResponse
+# Extract duration information
+def extract_duration(
+    text: str
+) -> str:
+
+    duration_match = re.search(
+
+        r'((?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+'
+        r'(?:day|days|week|weeks|month|months|year|years))',
+
+        text,
+
+        re.IGNORECASE
+    )
+
+    if duration_match:
+
+        return duration_match.group(1)
+
+    return ""
+
+
+# Extract meaningful clinical phrase
+# using POS tags instead of hardcoded words
+def extract_clinical_phrase(
+    text: str
+) -> str:
+
+    doc = nlp(
+        text
+    )
+
+    phrase_tokens = []
+
+    for token in doc:
+
+        if token.pos_ in [
+
+            "ADJ",
+
+            "NOUN",
+
+            "PROPN"
+        ]:
+
+            phrase_tokens.append(
+                token.text
+            )
+
+    return " ".join(
+        phrase_tokens
+    ).strip()
+
+
+# Generate clinical note
 def generate_clinical_note(
     translated_text: str
 ) -> ClinicalNoteResponse:
@@ -96,7 +148,7 @@ def generate_clinical_note(
             "Starting clinical note generation"
         )
 
-        # Validate input text
+        # Validate translated text
         if not translated_text:
 
             logger.warning(
@@ -114,138 +166,177 @@ def generate_clinical_note(
                 source="voice"
             )
 
-        # Process text using spaCy
-        doc = nlp(
+        # Preprocess translated text
+        translated_text = preprocess_text(
             translated_text
         )
 
         logger.info(
-            "spaCy text processing completed"
+            f"Preprocessed Text: {translated_text}"
         )
 
-        # Initialize response fields
-        chief_complaint = ""
+        # Extract duration
+        duration = extract_duration(
+            translated_text
+        )
 
-        duration = ""
+        logger.info(
+            f"Duration extracted: {duration}"
+        )
+
+        # Split text into sentences
+        sentences = [
+
+            sentence.strip()
+
+            for sentence in re.split(
+                r"[.]",
+                translated_text
+            )
+
+            if sentence.strip()
+        ]
+
+        chief_complaint = ""
 
         symptoms = []
 
-        # Duration Extraction
-        duration_match = re.search(
+        # Process first sentence
+        if len(sentences) > 0:
 
-            r'((?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+'
-            r'(?:day|days|week|weeks|month|months|year|years))',
-
-            translated_text,
-
-            re.IGNORECASE
-        )
-
-        if duration_match:
-
-            duration = (
-                duration_match.group(1)
+            first_sentence = (
+                sentences[0]
             )
 
-            logger.info(
-                f"Duration extracted: {duration}"
+            # Remove duration from complaint sentence
+            if duration:
+
+                first_sentence = re.sub(
+
+                    re.escape(duration),
+
+                    "",
+
+                    first_sentence,
+
+                    flags=re.IGNORECASE
+                )
+
+            # Extract symptom after "with"
+            if " with " in first_sentence.lower():
+
+                split_text = re.split(
+
+                    r"\bwith\b",
+
+                    first_sentence,
+
+                    flags=re.IGNORECASE
+                )
+
+                complaint_text = (
+                    split_text[0]
+                )
+
+                if len(split_text) > 1:
+
+                    symptoms.append(
+
+                        split_text[1]
+                        .strip()
+                    )
+
+            else:
+
+                complaint_text = (
+                    first_sentence
+                )
+
+            # Extract chief complaint
+            chief_complaint = (
+
+                extract_clinical_phrase(
+                    complaint_text
+                )
             )
 
-        # Chief Complaint Extraction
-        noun_phrases = [
+        # Process remaining sentences
+        for sentence in sentences[1:]:
 
-            chunk.text.strip()
+            parts = re.split(
 
-            for chunk in doc.noun_chunks
+                r"\band\b",
 
-            if len(
-                chunk.text.strip()
-            ) > 3
-        ]
+                sentence,
 
-        if noun_phrases:
-
-            chief_complaint = max(
-
-                noun_phrases,
-
-                key=len
+                flags=re.IGNORECASE
             )
 
-            logger.info(
-                f"Chief complaint extracted: {chief_complaint}"
+            for part in parts:
+
+                part = (
+                    part.strip()
+                )
+
+                if len(part) > 3:
+
+                    symptoms.append(
+                        part
+                    )
+
+        # Clean symptoms
+        cleaned_symptoms = []
+
+        for symptom in symptoms:
+
+            symptom = (
+                symptom.strip()
             )
 
-        # Symptom Extraction
-
-        # Store symptom-related sentences
-        symptom_sentences = []
-
-        for sentence in doc.sents:
-
-            sentence_text = (
-                sentence.text.strip()
+            symptom = (
+                symptom.strip(
+                    "., "
+                )
             )
 
-            # Skip empty sentences
-            if not sentence_text:
+            if len(symptom) < 3:
 
                 continue
 
-            # Skip sentence containing
-            # the extracted chief complaint
-            if (
-
-                chief_complaint
-
-                and
-
-                chief_complaint.lower()
-
-                in sentence_text.lower()
-
-            ):
-
-                continue
-
-            symptom_sentences.append(
-                sentence_text
+            cleaned_symptoms.append(
+                symptom
             )
 
-        # Convert symptom sentences into
-        # cleaner symptom entities
-        symptoms = preprocess_symptoms(
-            symptom_sentences
-        )
+        # Remove duplicates
+        symptoms = list(
 
-        logger.info(
-            f"Symptoms extracted: {len(symptoms)}"
-        )
-
-        # Create structured response
-        clinical_note = (
-
-            ClinicalNoteResponse(
-
-                chief_complaint=
-                    chief_complaint,
-
-                duration=
-                    duration,
-
-                symptoms=
-                    symptoms,
-
-                source=
-                    "voice"
+            dict.fromkeys(
+                cleaned_symptoms
             )
         )
 
         logger.info(
-            "Clinical note generation completed successfully"
+            f"Chief Complaint: {chief_complaint}"
         )
 
-        return clinical_note
+        logger.info(
+            f"Symptoms Extracted: {symptoms}"
+        )
+
+        return ClinicalNoteResponse(
+
+            chief_complaint=
+                chief_complaint,
+
+            duration=
+                duration,
+
+            symptoms=
+                symptoms,
+
+            source=
+                "voice"
+        )
 
     except Exception as e:
 
@@ -263,3 +354,4 @@ def generate_clinical_note(
 
             source="voice"
         )
+
