@@ -70,7 +70,7 @@ def preprocess_text(
             " "
         )
 
-    # Remove extra spaces
+    # Normalize spaces
     text = re.sub(
 
         r"\s+",
@@ -106,7 +106,7 @@ def extract_duration(
 
 
 # Extract meaningful clinical phrase
-# using POS tags instead of hardcoded words
+# using POS tags
 def extract_clinical_phrase(
     text: str
 ) -> str:
@@ -127,6 +127,13 @@ def extract_clinical_phrase(
 
             "PROPN"
         ]:
+
+            # Remove single-character artifacts
+            if len(
+                token.text.strip()
+            ) <= 1:
+
+                continue
 
             phrase_tokens.append(
                 token.text
@@ -222,7 +229,7 @@ def generate_clinical_note(
                     flags=re.IGNORECASE
                 )
 
-            # Extract symptom after "with"
+            # Extract symptoms after "with"
             if " with " in first_sentence.lower():
 
                 split_text = re.split(
@@ -299,7 +306,25 @@ def generate_clinical_note(
                 )
             )
 
-            if len(symptom) < 3:
+            # Remove single-character words
+            words = symptom.split()
+
+            words = [
+
+                word
+
+                for word in words
+
+                if len(
+                    word.strip()
+                ) > 1
+            ]
+
+            symptom = " ".join(
+                words
+            )
+
+            if not symptom:
 
                 continue
 
@@ -323,6 +348,7 @@ def generate_clinical_note(
             f"Symptoms Extracted: {symptoms}"
         )
 
+        # Return structured response
         return ClinicalNoteResponse(
 
             chief_complaint=
