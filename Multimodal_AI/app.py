@@ -1,4 +1,3 @@
-
 # Import FastAPI and file upload utilities
 from fastapi import FastAPI, UploadFile, File
 
@@ -26,6 +25,11 @@ from image_to_text_service.ocr_engine import (
     extract_text
 )
 
+# Import OCR Translation service
+from image_to_text_service.ocr_text_translation import (
+    translate_to_english
+)
+
 # Import Pydantic response models
 from voice_to_text_service.voice_response import (
     ClinicalNoteResponse
@@ -47,9 +51,7 @@ def home():
     )
 
     return {
-
-        "message":
-            "Multimodal CCMS_AI Services Running Successfully"
+        "message": "Multimodal CCMS_AI Services Running Successfully"
     }
 
 
@@ -88,11 +90,8 @@ async def speech_to_text(
             )
 
             return {
-
                 "status": "error",
-
-                "message":
-                    "Unsupported audio format"
+                "message": "Unsupported audio format"
             }
 
         # Create temporary audio file
@@ -107,7 +106,6 @@ async def speech_to_text(
 
         # Save audio into temporary file
         temp_file.write(content)
-
         temp_file.close()
 
         logger.info(
@@ -124,21 +122,11 @@ async def speech_to_text(
         )
 
         return {
-
-            "service":
-                "voice_to_text",
-
-            "input_filename":
-                file.filename,
-
-            "detected_language":
-                result.detected_language,
-
-            "original_transcription":
-                result.original_transcription,
-
-            "english_translation":
-                result.english_translation
+            "service": "voice_to_text",
+            "input_filename": file.filename,
+            "detected_language": result.detected_language,
+            "original_transcription": result.original_transcription,
+            "english_translation": result.english_translation
         }
 
     except Exception as e:
@@ -148,24 +136,16 @@ async def speech_to_text(
         )
 
         return {
-
             "status": "error",
-
-            "service":
-                "voice_to_text",
-
-            "message":
-                str(e)
+            "service": "voice_to_text",
+            "message": str(e)
         }
 
     finally:
 
-        # Delete temporary audio file
         if temp_file is not None:
 
-            if os.path.exists(
-                temp_file.name
-            ):
+            if os.path.exists(temp_file.name):
 
                 os.unlink(
                     temp_file.name
@@ -201,12 +181,10 @@ async def clinical_note_from_voice(
             ".m4a"
         ]
 
-        # Extract uploaded file extension
         file_extension = os.path.splitext(
             file.filename
         )[1].lower()
 
-        # Validate audio format
         if file_extension not in allowed_audio_formats:
 
             logger.warning(
@@ -214,49 +192,33 @@ async def clinical_note_from_voice(
             )
 
             return ClinicalNoteResponse(
-
                 chief_complaint="",
-
                 duration="",
-
                 symptoms=[],
-
                 source="voice"
             )
 
-        # Create temporary audio file
         temp_file = tempfile.NamedTemporaryFile(
             delete=False,
             suffix=file_extension,
             mode="wb"
         )
 
-        # Read uploaded audio file
         content = await file.read()
 
-        # Save audio into temporary file
         temp_file.write(content)
-
         temp_file.close()
 
         logger.info(
             "Audio file saved successfully"
         )
 
-        # Generate speech transcription
-        transcription_response = (
-            transcribe_audio(
-                temp_file.name
-            )
+        transcription_response = transcribe_audio(
+            temp_file.name
         )
 
-        # Generate structured clinical note
-        clinical_note = (
-            generate_clinical_note(
-
-                transcription_response.
-                english_translation
-            )
+        clinical_note = generate_clinical_note(
+            transcription_response.english_translation
         )
 
         logger.info(
@@ -272,24 +234,17 @@ async def clinical_note_from_voice(
         )
 
         return ClinicalNoteResponse(
-
             chief_complaint="",
-
             duration="",
-
             symptoms=[],
-
             source="voice"
         )
 
     finally:
 
-        # Delete temporary audio file
         if temp_file is not None:
 
-            if os.path.exists(
-                temp_file.name
-            ):
+            if os.path.exists(temp_file.name):
 
                 os.unlink(
                     temp_file.name
@@ -315,19 +270,16 @@ async def ocr_extraction(
             f"OCR request received: {file.filename}"
         )
 
-        # Supported image formats
         allowed_image_formats = [
             ".png",
             ".jpg",
             ".jpeg"
         ]
 
-        # Extract uploaded image extension
         file_extension = os.path.splitext(
             file.filename
         )[1].lower()
 
-        # Validate image format
         if file_extension not in allowed_image_formats:
 
             logger.warning(
@@ -335,26 +287,19 @@ async def ocr_extraction(
             )
 
             return {
-
                 "status": "error",
-
-                "message":
-                    "Unsupported image format"
+                "message": "Unsupported image format"
             }
 
-        # Create temporary image file
         temp_file = tempfile.NamedTemporaryFile(
             delete=False,
             suffix=file_extension,
             mode="wb"
         )
 
-        # Read uploaded image
         content = await file.read()
 
-        # Save image into temporary file
         temp_file.write(content)
-
         temp_file.close()
 
         logger.info(
@@ -366,20 +311,27 @@ async def ocr_extraction(
             temp_file.name
         )
 
+        # Translate OCR text to English
+        english_translation = translate_to_english(
+            extracted_text["text"]
+        )
+
         logger.info(
             "OCR extraction completed successfully"
         )
 
+        logger.info(
+            "OCR translation completed successfully"
+        )
+
         return {
-
-            "service":
-                "ocr_picture_to_text",
-
-            "input_filename":
-                file.filename,
-
-            "extracted_text":
-                extracted_text
+            "service": "ocr_picture_to_text",
+            "input_filename": file.filename,
+            "extracted_text": {
+                "language": extracted_text["language"],
+                "original_text": extracted_text["text"],
+                "english_translation": english_translation
+            }
         }
 
     except Exception as e:
@@ -389,24 +341,16 @@ async def ocr_extraction(
         )
 
         return {
-
             "status": "error",
-
-            "service":
-                "ocr_picture_to_text",
-
-            "message":
-                str(e)
+            "service": "ocr_picture_to_text",
+            "message": str(e)
         }
 
     finally:
 
-        # Delete temporary image file
         if temp_file is not None:
 
-            if os.path.exists(
-                temp_file.name
-            ):
+            if os.path.exists(temp_file.name):
 
                 os.unlink(
                     temp_file.name
