@@ -8,35 +8,52 @@ import easyocr
 import cv2
 from langdetect import detect
 
-# Load EasyOCR model
-print("Loading EasyOCR model...")
+# Load EasyOCR models
+print("Loading EasyOCR models...")
 
-# Initialize EasyOCR Reader
-# Supports English, Hindi, Tamil, Telugu
-# gpu=False -> Uses CPU for processing
-reader = easyocr.Reader(
-    ['en', 'hi', 'ta', 'te'],
+# Separate readers because EasyOCR does not allow
+# Tamil, Telugu and Hindi in a single reader
+
+english_reader = easyocr.Reader(
+    ['en'],
     gpu=False
 )
 
-print("EasyOCR model loaded successfully")
+hindi_reader = easyocr.Reader(
+    ['hi', 'en'],
+    gpu=False
+)
+
+tamil_reader = easyocr.Reader(
+    ['ta', 'en'],
+    gpu=False
+)
+
+telugu_reader = easyocr.Reader(
+    ['te', 'en'],
+    gpu=False
+)
+
+print("All EasyOCR models loaded successfully")
 
 
-# Language Detection Function
+# Language Mapping
+LANGUAGE_NAMES = {
+    "en": "English",
+    "hi": "Hindi",
+    "ta": "Tamil",
+    "te": "Telugu"
+}
+
+
+# Detect language using langdetect
 def detect_language(text):
 
     try:
 
         language_code = detect(text)
 
-        language_mapping = {
-            "en": "English",
-            "hi": "Hindi",
-            "ta": "Tamil",
-            "te": "Telugu"
-        }
-
-        return language_mapping.get(
+        return LANGUAGE_NAMES.get(
             language_code,
             f"Unknown Language ({language_code})"
         )
@@ -47,58 +64,93 @@ def detect_language(text):
 
 
 # Text Cleaning Function
-# Cleans extracted OCR text without modifying original words
 def clean_text(text):
 
     print("Starting text cleaning process...")
 
-    # Remove extra spaces
     text = " ".join(text.split())
 
     print("Extra spaces removed")
 
-    # Replace newline characters with spaces
     text = text.replace(
         "\n",
         " "
     )
 
-    # Remove repeated spaces again
     text = " ".join(text.split())
 
     print("Text formatting cleanup completed")
 
-    # Return cleaned text
     return text.strip()
 
 
-# OCR Text Extraction Function
+# OCR Helper Function
+def perform_ocr(reader, image):
+
+    try:
+
+        results = reader.readtext(
+            image,
+            paragraph=True
+        )
+
+        extracted_text = []
+
+        for result in results:
+
+            if len(result) < 2:
+                continue
+
+            extracted_text.append(
+                result[1].strip()
+            )
+
+        final_text = " ".join(
+            extracted_text
+        )
+
+        return clean_text(
+            final_text
+        )
+
+    except Exception as e:
+
+        print(f"OCR Error: {str(e)}")
+
+        return ""
+
+
+# Main OCR Function
 def extract_text(image_path):
 
     try:
 
         print("Starting OCR Extraction Pipeline")
 
-        # Display image path
-        print(f"Processing Image: {image_path}")
+        print(
+            f"Processing Image: {image_path}"
+        )
 
-        # Read image using OpenCV
-        image = cv2.imread(image_path)
+        image = cv2.imread(
+            image_path
+        )
 
-        # Validate image loading
         if image is None:
 
-            print("Image loading failed")
+            print(
+                "Image loading failed"
+            )
 
             return {
                 "language": "Unknown",
                 "text": "Unable to read image"
             }
 
-        print("Image loaded successfully")
+        print(
+            "Image loaded successfully"
+        )
 
-        # Resize image
-        # Enlarging image improves OCR accuracy
+        # Resize image for better OCR accuracy
         image = cv2.resize(
             image,
             None,
@@ -107,89 +159,100 @@ def extract_text(image_path):
             interpolation=cv2.INTER_CUBIC
         )
 
-        print("Image resized successfully")
-
-        # Perform OCR extraction
-        print("Starting OCR text detection...")
-
-        results = reader.readtext(
-            image,
-            paragraph=True
+        print(
+            "Image resized successfully"
         )
 
-        print("OCR text detection completed")
+        # OCR using all supported readers
+        print(
+            "Running multilingual OCR..."
+        )
 
-        # Display raw OCR results
-        print("OCR Raw Results:")
-        print(results)
+        english_text = perform_ocr(
+            english_reader,
+            image
+        )
 
-        # Store extracted text
-        extracted_text = []
+        hindi_text = perform_ocr(
+            hindi_reader,
+            image
+        )
 
-        # Loop through OCR results
-        for result in results:
+        tamil_text = perform_ocr(
+            tamil_reader,
+            image
+        )
 
-            # Validate OCR result structure
-            if len(result) < 2:
+        telugu_text = perform_ocr(
+            telugu_reader,
+            image
+        )
 
-                continue
+        # Store OCR results
+        ocr_results = {
+            "English": english_text,
+            "Hindi": hindi_text,
+            "Tamil": tamil_text,
+            "Telugu": telugu_text
+        }
 
-            # Extract detected text
-            text = result[1]
-
-            print(f"Detected Text: {text}")
-
-            # Store extracted text
-            extracted_text.append(
-                text.strip()
+        # Select the result containing
+        # maximum extracted characters
+        detected_language = max(
+            ocr_results,
+            key=lambda x: len(
+                ocr_results[x]
             )
-
-        print("All detected text collected successfully")
-
-        # Combine extracted text
-        final_text = " ".join(extracted_text)
-
-        print("Text combination completed")
-
-        # Clean extracted text
-        final_text = clean_text(
-            final_text
         )
 
-        print("Text cleaning completed")
+        final_text = ocr_results[
+            detected_language
+        ]
 
-        # Handle empty OCR output
-        if final_text == "":
-
-            print("No text detected in image")
+        # If OCR result is empty
+        if not final_text:
 
             return {
                 "language": "Unknown",
                 "text": "No text detected"
             }
 
-        # Detect language
-        detected_language = detect_language(
+        # Additional verification
+        auto_detected_language = detect_language(
             final_text
         )
 
-        print("Language Detection Completed")
-        print(f"Detected Language: {detected_language}")
+        print(
+            f"EasyOCR Language: {detected_language}"
+        )
 
-        # Display final extracted text
-        print("Final Extracted Text:")
-        print(final_text)
+        print(
+            f"LangDetect Language: {auto_detected_language}"
+        )
+
+        print(
+            "Final Extracted Text:"
+        )
+
+        print(
+            final_text
+        )
 
         return {
             "language": detected_language,
+            "detected_language": auto_detected_language,
             "text": final_text
         }
 
     except Exception as e:
 
-        # Print OCR extraction error
-        print("OCR Extraction Error:")
-        print(str(e))
+        print(
+            "OCR Extraction Error:"
+        )
+
+        print(
+            str(e)
+        )
 
         return {
             "language": "Unknown",
@@ -198,12 +261,26 @@ def extract_text(image_path):
 
 
 # Example Usage
-result = extract_text(
-    "sample_image.jpg"
-)
+if __name__ == "__main__":
 
-print("\nDetected Language:")
-print(result["language"])
+    result = extract_text(
+        "sample_image.jpg"
+    )
 
-print("\nExtracted Text:")
-print(result["text"])
+    print("\nDetected Language:")
+    print(
+        result["language"]
+    )
+
+    print("\nLanguage Verification:")
+    print(
+        result.get(
+            "detected_language",
+            "N/A"
+        )
+    )
+
+    print("\nExtracted Text:")
+    print(
+        result["text"]
+    )
