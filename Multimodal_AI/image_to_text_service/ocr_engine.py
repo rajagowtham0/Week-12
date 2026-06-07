@@ -6,19 +6,44 @@ warnings.filterwarnings("ignore")
 # Import required libraries
 import easyocr
 import cv2
+from langdetect import detect
 
 # Load EasyOCR model
 print("Loading EasyOCR model...")
 
 # Initialize EasyOCR Reader
-# ['en'] -> English language support
+# Supports English, Hindi, Tamil, Telugu
 # gpu=False -> Uses CPU for processing
 reader = easyocr.Reader(
-    ['en'],
+    ['en', 'hi', 'ta', 'te'],
     gpu=False
 )
 
 print("EasyOCR model loaded successfully")
+
+
+# Language Detection Function
+def detect_language(text):
+
+    try:
+
+        language_code = detect(text)
+
+        language_mapping = {
+            "en": "English",
+            "hi": "Hindi",
+            "ta": "Tamil",
+            "te": "Telugu"
+        }
+
+        return language_mapping.get(
+            language_code,
+            f"Unknown Language ({language_code})"
+        )
+
+    except Exception:
+
+        return "Unable to Detect Language"
 
 
 # Text Cleaning Function
@@ -65,7 +90,10 @@ def extract_text(image_path):
 
             print("Image loading failed")
 
-            return "Unable to read image"
+            return {
+                "language": "Unknown",
+                "text": "Unable to read image"
+            }
 
         print("Image loaded successfully")
 
@@ -135,14 +163,27 @@ def extract_text(image_path):
 
             print("No text detected in image")
 
-            return "No text detected"
+            return {
+                "language": "Unknown",
+                "text": "No text detected"
+            }
+
+        # Detect language
+        detected_language = detect_language(
+            final_text
+        )
+
+        print("Language Detection Completed")
+        print(f"Detected Language: {detected_language}")
 
         # Display final extracted text
         print("Final Extracted Text:")
         print(final_text)
 
-        # Return final extracted text
-        return final_text
+        return {
+            "language": detected_language,
+            "text": final_text
+        }
 
     except Exception as e:
 
@@ -150,5 +191,19 @@ def extract_text(image_path):
         print("OCR Extraction Error:")
         print(str(e))
 
-        # Return error message
-        return f"OCR Extraction Error: {str(e)}"
+        return {
+            "language": "Unknown",
+            "text": f"OCR Extraction Error: {str(e)}"
+        }
+
+
+# Example Usage
+result = extract_text(
+    "sample_image.jpg"
+)
+
+print("\nDetected Language:")
+print(result["language"])
+
+print("\nExtracted Text:")
+print(result["text"])
