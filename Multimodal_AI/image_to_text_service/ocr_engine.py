@@ -1,44 +1,114 @@
 import warnings
-
-# Ignore unnecessary warnings
 warnings.filterwarnings("ignore")
 
-# Import required libraries
 import easyocr
 import cv2
 from langdetect import detect
 
-# Load EasyOCR models
-print("Loading EasyOCR models...")
+print("OCR Engine Initialized")
 
-# Separate readers because EasyOCR does not allow
-# Tamil, Telugu and Hindi in a single reader
-
-english_reader = easyocr.Reader(
-    ['en'],
-    gpu=False
-)
-
-hindi_reader = easyocr.Reader(
-    ['hi', 'en'],
-    gpu=False
-)
-
-tamil_reader = easyocr.Reader(
-    ['ta', 'en'],
-    gpu=False
-)
-
-telugu_reader = easyocr.Reader(
-    ['te', 'en'],
-    gpu=False
-)
-
-print("All EasyOCR models loaded successfully")
+# Global Readers
+english_reader = None
+hindi_reader = None
+tamil_reader = None
+telugu_reader = None
 
 
-# Language Mapping
-LANGUAGE_NAMES = {
+def get_english_reader():
+
+    global english_reader
+
+    if english_reader is None:
+
+        print("Loading English OCR Model...")
+
+        english_reader = easyocr.Reader(
+            ['en'],
+            gpu=False
+        )
+
+    return english_reader
+
+
+def get_hindi_reader():
+
+    global hindi_reader
+
+    if hindi_reader is None:
+
+        try:
+
+            print("Loading Hindi OCR Model...")
+
+            hindi_reader = easyocr.Reader(
+                ['hi', 'en'],
+                gpu=False
+            )
+
+        except Exception as e:
+
+            print(
+                f"Hindi OCR Model Load Failed: {str(e)}"
+            )
+
+            hindi_reader = None
+
+    return hindi_reader
+
+
+def get_tamil_reader():
+
+    global tamil_reader
+
+    if tamil_reader is None:
+
+        try:
+
+            print("Loading Tamil OCR Model...")
+
+            tamil_reader = easyocr.Reader(
+                ['ta', 'en'],
+                gpu=False
+            )
+
+        except Exception as e:
+
+            print(
+                f"Tamil OCR Model Load Failed: {str(e)}"
+            )
+
+            tamil_reader = None
+
+    return tamil_reader
+
+
+def get_telugu_reader():
+
+    global telugu_reader
+
+    if telugu_reader is None:
+
+        try:
+
+            print("Loading Telugu OCR Model...")
+
+            telugu_reader = easyocr.Reader(
+                ['te', 'en'],
+                gpu=False
+            )
+
+        except Exception as e:
+
+            print(
+                f"Telugu OCR Model Load Failed: {str(e)}"
+            )
+
+            telugu_reader = None
+
+    return telugu_reader
+
+
+LANGUAGE_MAPPING = {
     "en": "English",
     "hi": "Hindi",
     "ta": "Tamil",
@@ -46,48 +116,43 @@ LANGUAGE_NAMES = {
 }
 
 
-# Detect language using langdetect
 def detect_language(text):
 
     try:
 
         language_code = detect(text)
 
-        return LANGUAGE_NAMES.get(
+        return LANGUAGE_MAPPING.get(
             language_code,
-            f"Unknown Language ({language_code})"
+            language_code
         )
 
     except Exception:
 
-        return "Unable to Detect Language"
+        return "Unknown"
 
 
-# Text Cleaning Function
 def clean_text(text):
-
-    print("Starting text cleaning process...")
-
-    text = " ".join(text.split())
-
-    print("Extra spaces removed")
 
     text = text.replace(
         "\n",
         " "
     )
 
-    text = " ".join(text.split())
-
-    print("Text formatting cleanup completed")
+    text = " ".join(
+        text.split()
+    )
 
     return text.strip()
 
 
-# OCR Helper Function
 def perform_ocr(reader, image):
 
     try:
+
+        if reader is None:
+
+            return ""
 
         results = reader.readtext(
             image,
@@ -98,34 +163,30 @@ def perform_ocr(reader, image):
 
         for result in results:
 
-            if len(result) < 2:
-                continue
+            if len(result) >= 2:
 
-            extracted_text.append(
-                result[1].strip()
-            )
-
-        final_text = " ".join(
-            extracted_text
-        )
+                extracted_text.append(
+                    result[1].strip()
+                )
 
         return clean_text(
-            final_text
+            " ".join(
+                extracted_text
+            )
         )
 
     except Exception as e:
 
-        print(f"OCR Error: {str(e)}")
+        print(
+            f"OCR Error: {str(e)}"
+        )
 
         return ""
 
 
-# Main OCR Function
 def extract_text(image_path):
 
     try:
-
-        print("Starting OCR Extraction Pipeline")
 
         print(
             f"Processing Image: {image_path}"
@@ -137,20 +198,11 @@ def extract_text(image_path):
 
         if image is None:
 
-            print(
-                "Image loading failed"
-            )
-
             return {
                 "language": "Unknown",
                 "text": "Unable to read image"
             }
 
-        print(
-            "Image loaded successfully"
-        )
-
-        # Resize image for better OCR accuracy
         image = cv2.resize(
             image,
             None,
@@ -159,45 +211,51 @@ def extract_text(image_path):
             interpolation=cv2.INTER_CUBIC
         )
 
-        print(
-            "Image resized successfully"
-        )
-
-        # OCR using all supported readers
-        print(
-            "Running multilingual OCR..."
-        )
+        ocr_results = {}
 
         english_text = perform_ocr(
-            english_reader,
+            get_english_reader(),
             image
         )
+
+        if english_text:
+
+            ocr_results["English"] = english_text
 
         hindi_text = perform_ocr(
-            hindi_reader,
+            get_hindi_reader(),
             image
         )
+
+        if hindi_text:
+
+            ocr_results["Hindi"] = hindi_text
 
         tamil_text = perform_ocr(
-            tamil_reader,
+            get_tamil_reader(),
             image
         )
+
+        if tamil_text:
+
+            ocr_results["Tamil"] = tamil_text
 
         telugu_text = perform_ocr(
-            telugu_reader,
+            get_telugu_reader(),
             image
         )
 
-        # Store OCR results
-        ocr_results = {
-            "English": english_text,
-            "Hindi": hindi_text,
-            "Tamil": tamil_text,
-            "Telugu": telugu_text
-        }
+        if telugu_text:
 
-        # Select the result containing
-        # maximum extracted characters
+            ocr_results["Telugu"] = telugu_text
+
+        if not ocr_results:
+
+            return {
+                "language": "Unknown",
+                "text": "No text detected"
+            }
+
         detected_language = max(
             ocr_results,
             key=lambda x: len(
@@ -209,78 +267,23 @@ def extract_text(image_path):
             detected_language
         ]
 
-        # If OCR result is empty
-        if not final_text:
-
-            return {
-                "language": "Unknown",
-                "text": "No text detected"
-            }
-
-        # Additional verification
-        auto_detected_language = detect_language(
-            final_text
-        )
-
-        print(
-            f"EasyOCR Language: {detected_language}"
-        )
-
-        print(
-            f"LangDetect Language: {auto_detected_language}"
-        )
-
-        print(
-            "Final Extracted Text:"
-        )
-
-        print(
+        verified_language = detect_language(
             final_text
         )
 
         return {
             "language": detected_language,
-            "detected_language": auto_detected_language,
+            "verified_language": verified_language,
             "text": final_text
         }
 
     except Exception as e:
 
         print(
-            "OCR Extraction Error:"
-        )
-
-        print(
-            str(e)
+            f"OCR Extraction Error: {str(e)}"
         )
 
         return {
             "language": "Unknown",
-            "text": f"OCR Extraction Error: {str(e)}"
+            "text": str(e)
         }
-
-
-# Example Usage
-if __name__ == "__main__":
-
-    result = extract_text(
-        "sample_image.jpg"
-    )
-
-    print("\nDetected Language:")
-    print(
-        result["language"]
-    )
-
-    print("\nLanguage Verification:")
-    print(
-        result.get(
-            "detected_language",
-            "N/A"
-        )
-    )
-
-    print("\nExtracted Text:")
-    print(
-        result["text"]
-    )
