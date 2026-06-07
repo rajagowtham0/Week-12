@@ -44,28 +44,86 @@ PRIMARY_SYMPTOMS = [
     "instability",
     "tenderness",
     "spasm",
-    "cramp"
+    "cramp",
+    "soreness",
+    "aching",
+    "discomfort",
+    "tightness",
+    "inflammation"
 ]
 
 
 SECONDARY_SYMPTOMS = [
+    # Neurological
     "numbness",
     "tingling",
     "burning",
     "burning sensation",
+    "loss of sensation",
+    "pins and needles",
     "radiating pain",
-    "restricted movement",
+    "shooting pain",
+    "referred pain",
+
+    # Functional
     "difficulty walking",
     "difficulty standing",
     "difficulty sitting",
     "difficulty bending",
     "difficulty lifting",
     "difficulty climbing stairs",
-    "loss of balance",
+    "difficulty reaching",
+    "difficulty turning",
+    "difficulty squatting",
+    "difficulty running",
+    "difficulty sleeping",
+
+    # Movement
+    "restricted movement",
     "reduced range of motion",
-    "muscle tightness",
+    "limited mobility",
+    "joint locking",
+    "joint clicking",
+    "joint popping",
+
+    # Balance / gait
+    "loss of balance",
+    "unsteady gait",
+    "gait difficulty",
+
+    # Muscle related
     "muscle weakness",
-    "gait difficulty"
+    "muscle tightness",
+    "muscle fatigue",
+    "muscle spasm",
+
+    # General
+    "fatigue",
+    "tiredness",
+    "headache",
+    "dizziness",
+    "vertigo",
+    "fever",
+    "chills",
+    "nausea",
+    "vomiting",
+
+    # Respiratory
+    "cough",
+    "shortness of breath",
+    "breathlessness",
+
+    # Physiotherapy related
+    "pain while walking",
+    "pain while standing",
+    "pain while sitting",
+    "pain while bending",
+    "pain while lifting",
+    "pain during movement",
+    "pain at rest",
+    "morning stiffness",
+    "night pain",
+    "weight bearing pain"
 ]
 
 
