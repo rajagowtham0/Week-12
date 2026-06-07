@@ -1,10 +1,12 @@
 import re
-from collections import Counter
 
 from utils.logger import logger
 from voice_to_text_service.voice_response import ClinicalNoteResponse
 
 
+# Body parts used to construct the chief complaint
+# Example:
+# lower back + pain -> lower back pain
 BODY_PARTS = [
     "lower back",
     "upper back",
@@ -36,6 +38,7 @@ BODY_PARTS = [
 ]
 
 
+# Primary symptoms that form the chief complaint
 PRIMARY_SYMPTOMS = [
     "pain",
     "stiffness",
@@ -53,8 +56,10 @@ PRIMARY_SYMPTOMS = [
 ]
 
 
+# Secondary symptoms extracted as associated symptoms
 SECONDARY_SYMPTOMS = [
-    # Neurological
+
+    # Neurological symptoms
     "numbness",
     "tingling",
     "burning",
@@ -65,7 +70,7 @@ SECONDARY_SYMPTOMS = [
     "shooting pain",
     "referred pain",
 
-    # Functional
+    # Functional limitations
     "difficulty walking",
     "difficulty standing",
     "difficulty sitting",
@@ -78,7 +83,7 @@ SECONDARY_SYMPTOMS = [
     "difficulty running",
     "difficulty sleeping",
 
-    # Movement
+    # Movement restrictions
     "restricted movement",
     "reduced range of motion",
     "limited mobility",
@@ -86,18 +91,18 @@ SECONDARY_SYMPTOMS = [
     "joint clicking",
     "joint popping",
 
-    # Balance / gait
+    # Balance and gait symptoms
     "loss of balance",
     "unsteady gait",
     "gait difficulty",
 
-    # Muscle related
+    # Muscle-related symptoms
     "muscle weakness",
     "muscle tightness",
     "muscle fatigue",
     "muscle spasm",
 
-    # General
+    # General symptoms
     "fatigue",
     "tiredness",
     "headache",
@@ -108,12 +113,12 @@ SECONDARY_SYMPTOMS = [
     "nausea",
     "vomiting",
 
-    # Respiratory
+    # Respiratory symptoms
     "cough",
     "shortness of breath",
     "breathlessness",
 
-    # Physiotherapy related
+    # Physiotherapy-specific symptoms
     "pain while walking",
     "pain while standing",
     "pain while sitting",
@@ -127,6 +132,11 @@ SECONDARY_SYMPTOMS = [
 ]
 
 
+# Regex pattern to extract duration
+# Examples:
+# three weeks
+# two months
+# five years
 DURATION_PATTERN = re.compile(
     r"(?:for|since|past|last)?\s*"
     r"("
@@ -139,6 +149,7 @@ DURATION_PATTERN = re.compile(
 )
 
 
+# Clean and normalize incoming voice-transcribed text
 def preprocess_text(text: str) -> str:
 
     if not text:
@@ -161,6 +172,7 @@ def preprocess_text(text: str) -> str:
     for phrase in filler_phrases:
         text = text.replace(phrase, " ")
 
+    # Normalize common speech variations
     text = text.replace("paining", "pain")
     text = text.replace("spreading", "radiating")
 
@@ -169,6 +181,7 @@ def preprocess_text(text: str) -> str:
     return text.strip()
 
 
+# Extract duration from the text
 def extract_duration(text: str) -> str:
 
     match = DURATION_PATTERN.search(text)
@@ -179,6 +192,9 @@ def extract_duration(text: str) -> str:
     return ""
 
 
+# Extract the most specific body part
+# Example:
+# lower back preferred over back
 def extract_body_part(text: str) -> str:
 
     matched_parts = []
@@ -199,6 +215,7 @@ def extract_body_part(text: str) -> str:
     return matched_parts[0]
 
 
+# Extract the primary symptom
 def extract_primary_symptom(text: str) -> str:
 
     for symptom in PRIMARY_SYMPTOMS:
@@ -209,6 +226,9 @@ def extract_primary_symptom(text: str) -> str:
     return ""
 
 
+# Construct chief complaint
+# Example:
+# lower back + pain -> lower back pain
 def build_chief_complaint(text: str) -> str:
 
     body_part = extract_body_part(text)
@@ -227,15 +247,18 @@ def build_chief_complaint(text: str) -> str:
     return ""
 
 
+# Extract associated symptoms
 def extract_secondary_symptoms(text: str) -> list:
 
     detected = []
 
+    # Detect symptoms from symptom dictionary
     for symptom in SECONDARY_SYMPTOMS:
 
         if symptom in text:
             detected.append(symptom)
 
+    # Detect radiating pain pattern
     if "radiating" in text:
 
         leg_match = re.search(
@@ -252,6 +275,7 @@ def extract_secondary_symptoms(text: str) -> list:
                 "radiating pain"
             )
 
+    # Detect common activity aggravation patterns
     if "standing" in text:
         detected.append(
             "pain aggravated by standing"
@@ -272,6 +296,7 @@ def extract_secondary_symptoms(text: str) -> list:
             "difficulty lifting"
         )
 
+    # Remove duplicate symptoms
     detected = list(
         dict.fromkeys(detected)
     )
@@ -279,6 +304,8 @@ def extract_secondary_symptoms(text: str) -> list:
     return detected
 
 
+# Main function used by the API endpoint
+# Converts translated voice text into a structured clinical note
 def generate_clinical_note(
     translated_text: str
 ) -> ClinicalNoteResponse:
