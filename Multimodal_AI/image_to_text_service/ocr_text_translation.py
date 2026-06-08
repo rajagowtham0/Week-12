@@ -1,19 +1,29 @@
-# Import required libraries
+# Import translation library
 from deep_translator import GoogleTranslator
 
+# Import application logger
+from utils.logger import logger
 
-# ==========================================================
-# TRANSLATE TEXT TO ENGLISH
-# ==========================================================
 
+# Translate extracted OCR text into English
 def translate_to_english(text):
 
     try:
 
+        # Validate input text
         if not text:
+
+            logger.warning(
+                "Empty text received for translation"
+            )
 
             return ""
 
+        logger.info(
+            "OCR text translation started"
+        )
+
+        # Translate text to English
         translated_text = GoogleTranslator(
             source="auto",
             target="en"
@@ -21,12 +31,17 @@ def translate_to_english(text):
             text
         )
 
+        logger.info(
+            "OCR text translation completed successfully"
+        )
+
         return translated_text
 
     except Exception as e:
 
-        print(
-            f"Translation Error: {str(e)}"
+        logger.error(
+            f"OCR translation error: {str(e)}"
         )
 
+        # Return original text if translation fails
         return text

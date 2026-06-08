@@ -8,6 +8,9 @@ from utils.config import (
     TESSERACT_PATH
 )
 
+# Import logger
+from utils.logger import logger
+
 # Configure Tesseract OCR
 pytesseract.pytesseract.tesseract_cmd = (
     TESSERACT_PATH
@@ -95,7 +98,7 @@ def extract_text(image_path):
 
     try:
 
-        print(
+        logger.info(
             f"Processing Image: {image_path}"
         )
 
@@ -104,6 +107,10 @@ def extract_text(image_path):
         )
 
         if image is None:
+
+            logger.error(
+                "Unable to read image"
+            )
 
             return {
                 "language": "Unknown",
@@ -122,7 +129,11 @@ def extract_text(image_path):
                 config="--oem 3 --psm 6"
             )
 
-        except Exception:
+        except Exception as e:
+
+            logger.warning(
+                f"Multilingual OCR failed. Falling back to English OCR. Error: {str(e)}"
+            )
 
             extracted_text = pytesseract.image_to_string(
                 processed_image,
@@ -136,6 +147,10 @@ def extract_text(image_path):
 
         if not extracted_text:
 
+            logger.warning(
+                "No text detected in image"
+            )
+
             return {
                 "language": "Unknown",
                 "text": "No text detected"
@@ -145,6 +160,16 @@ def extract_text(image_path):
             extracted_text
         )
 
+        # Vital Log 1
+        logger.info(
+            f"Detected Language: {detected_language}"
+        )
+
+        # Vital Log 2
+        logger.info(
+            f"Extracted Text Preview: {extracted_text[:200]}"
+        )
+
         return {
             "language": detected_language,
             "text": extracted_text
@@ -152,7 +177,7 @@ def extract_text(image_path):
 
     except Exception as e:
 
-        print(
+        logger.error(
             f"OCR Error: {str(e)}"
         )
 
