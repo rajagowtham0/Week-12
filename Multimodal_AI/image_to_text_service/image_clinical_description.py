@@ -25,6 +25,7 @@ def generate_clinical_description(text):
             "recommendations": []
         }
 
+        # Validate input
         if not text:
 
             return result
@@ -36,9 +37,13 @@ def generate_clinical_description(text):
             text
         ).strip()
 
+        logger.info(
+            f"Clinical Text Received: {text}"
+        )
+
         # Patient Name
         patient_match = re.search(
-            r"Patient\s*Name:\s*(.*?)\s*Diagnosis:",
+            r"Patient\s*Name\s*[:\-]?\s*([A-Za-z\s]+)",
             text,
             re.IGNORECASE
         )
@@ -51,7 +56,7 @@ def generate_clinical_description(text):
 
         # Diagnosis
         diagnosis_match = re.search(
-            r"Diagnosis:\s*(.*?)\s*Medications:",
+            r"Diagnosis\s*[:\-]?\s*(.*?)(?=Medications?|Medicines?|Prescription|Recommendations?|Advice|$)",
             text,
             re.IGNORECASE
         )
@@ -64,7 +69,7 @@ def generate_clinical_description(text):
 
         # Medications
         medication_match = re.search(
-            r"Medications:\s*(.*?)\s*Recommendations:",
+            r"(?:Medications?|Medicines?|Prescription)\s*[:\-]?\s*(.*?)(?=Recommendations?|Advice|$)",
             text,
             re.IGNORECASE
         )
@@ -75,13 +80,23 @@ def generate_clinical_description(text):
                 medication_match.group(1).strip()
             )
 
-            result["medications"] = [
-                medications_text
+            medications = [
+
+                med.strip()
+
+                for med in re.split(
+                    r"[,;\n]",
+                    medications_text
+                )
+
+                if med.strip()
             ]
+
+            result["medications"] = medications
 
         # Recommendations
         recommendation_match = re.search(
-            r"Recommendations:\s*(.*)",
+            r"(?:Recommendations?|Advice)\s*[:\-]?\s*(.*)",
             text,
             re.IGNORECASE
         )
@@ -92,9 +107,23 @@ def generate_clinical_description(text):
                 recommendation_match.group(1).strip()
             )
 
-            result["recommendations"] = [
-                recommendations_text
+            recommendations = [
+
+                rec.strip()
+
+                for rec in re.split(
+                    r"[,;\n]",
+                    recommendations_text
+                )
+
+                if rec.strip()
             ]
+
+            result["recommendations"] = recommendations
+
+        logger.info(
+            f"Extracted Clinical Information: {result}"
+        )
 
         logger.info(
             "Clinical information extraction completed successfully"
