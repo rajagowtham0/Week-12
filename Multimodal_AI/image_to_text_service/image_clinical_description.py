@@ -5,8 +5,22 @@ import re
 from utils.logger import logger
 
 
-# Extract structured clinical information
 def generate_clinical_description(text):
+    """
+    Robust clinical note extractor for OCR + translated text.
+
+    Extracts:
+    - patient_name
+    - diagnosis
+    - medications
+    - recommendations
+
+    Handles:
+    - Single-line translated text
+    - Multi-line translated text
+    - OCR formatting issues
+    - Advice/Suggestion/Recommendation variations
+    """
 
     try:
 
@@ -25,27 +39,96 @@ def generate_clinical_description(text):
             "recommendations": []
         }
 
-        # Validate input
         if not text:
 
             return result
 
-        # Normalize spaces
-        text = re.sub(
-            r"\s+",
-            " ",
-            text
-        ).strip()
+        # ----------------------------------
+        # Text Cleaning
+        # ----------------------------------
 
-        logger.info(
-            f"Clinical Text Received: {text}"
+        text = text.replace(
+            "\r\n",
+            "\n"
         )
 
-        # Patient Name
+        text = text.replace(
+            "\r",
+            "\n"
+        )
+
+        text = re.sub(
+            r"[ \t]+",
+            " ",
+            text
+        )
+
+        # ----------------------------------
+        # Normalize Section Headers
+        # ----------------------------------
+
+        headers = [
+
+            "Patient Name",
+            "Patient",
+
+            "Diagnosis",
+            "Clinical Diagnosis",
+            "Assessment",
+            "Description",
+            "BD Description",
+
+            "Medicine",
+            "Medicines",
+            "Medication",
+            "Medications",
+            "Drug",
+            "Drugs",
+            "Prescription",
+            "Rx",
+
+            "Advice",
+            "Advises",
+            "Suggestion",
+            "Suggestions",
+            "Recommendation",
+            "Recommendations",
+            "Instruction",
+            "Instructions",
+            "Plan",
+            "Follow Up"
+        ]
+
+        # Insert newline before section headers
+        for header in headers:
+
+            text = re.sub(
+                rf"\s*({re.escape(header)}\s*:)",
+                r"\n\1",
+                text,
+                flags=re.IGNORECASE
+            )
+
+        text = re.sub(
+            r"\n{2,}",
+            "\n",
+            text
+        )
+
+        text = text.strip()
+
+        logger.info(
+            f"Normalized Text:\n{text}"
+        )
+
+        # ----------------------------------
+        # Extract Patient Name
+        # ----------------------------------
+
         patient_match = re.search(
-            r"Patient\s*Name\s*[:\-]?\s*([A-Za-z\s]+)",
+            r"Patient\s*Name\s*:\s*(.*?)(?=\n(?:Diagnosis|Clinical Diagnosis|Assessment|Description|BD Description)\s*:|$)",
             text,
-            re.IGNORECASE
+            re.IGNORECASE | re.DOTALL
         )
 
         if patient_match:
@@ -54,11 +137,14 @@ def generate_clinical_description(text):
                 patient_match.group(1).strip()
             )
 
-        # Diagnosis
+        # ----------------------------------
+        # Extract Diagnosis
+        # ----------------------------------
+
         diagnosis_match = re.search(
-            r"Diagnosis\s*[:\-]?\s*(.*?)(?=Medications?|Medicines?|Prescription|Recommendations?|Advice|$)",
+            r"(?:Diagnosis|Clinical Diagnosis|Assessment|Description|BD Description)\s*:\s*(.*?)(?=\n(?:Medicine|Medicines|Medication|Medications|Drug|Drugs|Prescription|Rx)\s*:|$)",
             text,
-            re.IGNORECASE
+            re.IGNORECASE | re.DOTALL
         )
 
         if diagnosis_match:
@@ -67,11 +153,14 @@ def generate_clinical_description(text):
                 diagnosis_match.group(1).strip()
             )
 
-        # Medications
+        # ----------------------------------
+        # Extract Medications
+        # ----------------------------------
+
         medication_match = re.search(
-            r"(?:Medications?|Medicines?|Prescription)\s*[:\-]?\s*(.*?)(?=Recommendations?|Advice|$)",
+            r"(?:Medicine|Medicines|Medication|Medications|Drug|Drugs|Prescription|Rx)\s*:\s*(.*?)(?=\n(?:Advice|Advises|Suggestion|Suggestions|Recommendation|Recommendations|Instruction|Instructions|Plan|Follow Up)\s*:|$)",
             text,
-            re.IGNORECASE
+            re.IGNORECASE | re.DOTALL
         )
 
         if medication_match:
@@ -82,23 +171,26 @@ def generate_clinical_description(text):
 
             medications = [
 
-                med.strip()
+                item.strip()
 
-                for med in re.split(
-                    r"[,;\n]",
+                for item in re.split(
+                    r"[\n,;•●▪]",
                     medications_text
                 )
 
-                if med.strip()
+                if item.strip()
             ]
 
             result["medications"] = medications
 
-        # Recommendations
+        # ----------------------------------
+        # Extract Recommendations
+        # ----------------------------------
+
         recommendation_match = re.search(
-            r"(?:Recommendations?|Advice)\s*[:\-]?\s*(.*)",
+            r"(?:Advice|Advises|Suggestion|Suggestions|Recommendation|Recommendations|Instruction|Instructions|Plan|Follow Up)\s*:\s*(.*)",
             text,
-            re.IGNORECASE
+            re.IGNORECASE | re.DOTALL
         )
 
         if recommendation_match:
@@ -109,17 +201,33 @@ def generate_clinical_description(text):
 
             recommendations = [
 
-                rec.strip()
+                item.strip()
 
-                for rec in re.split(
-                    r"[,;\n]",
+                for item in re.split(
+                    r"[\n,;•●▪]",
                     recommendations_text
                 )
 
-                if rec.strip()
+                if item.strip()
             ]
 
             result["recommendations"] = recommendations
+
+        # ----------------------------------
+        # Remove Duplicates
+        # ----------------------------------
+
+        result["medications"] = list(
+            dict.fromkeys(
+                result["medications"]
+            )
+        )
+
+        result["recommendations"] = list(
+            dict.fromkeys(
+                result["recommendations"]
+            )
+        )
 
         logger.info(
             f"Extracted Clinical Information: {result}"
