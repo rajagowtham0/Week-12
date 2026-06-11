@@ -23,16 +23,56 @@ def translate_to_english(text):
             "OCR text translation started"
         )
 
-        # Translate text to English
-        translated_text = GoogleTranslator(
-            source="auto",
-            target="en"
-        ).translate(
-            text
+        # Preserve line structure before translation
+        lines = [
+
+            line.strip()
+
+            for line in text.splitlines()
+
+            if line.strip()
+
+        ]
+
+        translated_lines = []
+
+        # Translate line by line
+        for line in lines:
+
+            try:
+
+                translated_line = GoogleTranslator(
+                    source="auto",
+                    target="en"
+                ).translate(
+                    line
+                )
+
+                translated_lines.append(
+                    translated_line
+                )
+
+            except Exception as line_error:
+
+                logger.warning(
+                    f"Line translation failed: {str(line_error)}"
+                )
+
+                translated_lines.append(
+                    line
+                )
+
+        # Reconstruct translated text with original line breaks
+        translated_text = "\n".join(
+            translated_lines
         )
 
         logger.info(
             "OCR text translation completed successfully"
+        )
+
+        logger.info(
+            f"Translated {len(lines)} text segments successfully"
         )
 
         return translated_text

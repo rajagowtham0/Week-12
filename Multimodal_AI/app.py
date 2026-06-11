@@ -34,6 +34,10 @@ from image_to_text_service.ocr_text_translation import (
 from voice_to_text_service.voice_response import (
     ClinicalNoteResponse
 )
+# Import Clinical Information Extraction service
+from image_to_text_service.image_clinical_description import (
+    generate_clinical_description
+)
 
 # Create FastAPI application
 app = FastAPI(
@@ -359,3 +363,140 @@ async def ocr_extraction(
                 logger.info(
                     "Temporary image file deleted"
                 )
+# Clinical Note From Image Endpoint
+# Extracts structured clinical information from scanned documents
+
+@app.post("/clinical-note-from-image")
+async def clinical_note_from_image(
+    file: UploadFile = File(...)
+):
+
+    temp_file = None
+
+    try:
+
+        logger.info(
+            f"Clinical Note From Image request received: {file.filename}"
+        )
+
+        # Supported image formats
+        allowed_image_formats = [
+            ".png",
+            ".jpg",
+            ".jpeg"
+        ]
+
+        # Extract uploaded image extension
+        file_extension = os.path.splitext(
+            file.filename
+        )[1].lower()
+
+        # Validate image format
+        if file_extension not in allowed_image_formats:
+
+            logger.warning(
+                f"Unsupported image format: {file_extension}"
+            )
+
+            return {
+
+                "status": "error",
+
+                "message":
+                    "Unsupported image format"
+            }
+
+        # Create temporary image file
+        temp_file = tempfile.NamedTemporaryFile(
+            delete=False,
+            suffix=file_extension,
+            mode="wb"
+        )
+
+        # Read uploaded image
+        content = await file.read()
+
+        # Save image into temporary file
+        temp_file.write(
+            content
+        )
+
+        temp_file.close()
+
+        logger.info(
+            "Image file saved successfully"
+        )
+
+        # OCR Extraction
+        extracted_text = extract_text(
+            temp_file.name
+        )
+
+        # Translation
+        english_translation = (
+            translate_to_english(
+                extracted_text.get(
+                    "text",
+                    ""
+                )
+            )
+        )
+
+        # Clinical Information Extraction
+        clinical_note = (
+            generate_clinical_description(
+                english_translation
+            )
+        )
+
+        logger.info(
+            "Clinical note generated successfully from image"
+        )
+
+        return {
+
+            "service":
+                "clinical_note_from_image",
+
+            "input_filename":
+                file.filename,
+
+            "clinical_note":
+                clinical_note
+        }
+
+    except Exception as e:
+
+        logger.error(
+            f"Clinical note from image error: {str(e)}"
+        )
+
+        return {
+
+            "status":
+                "error",
+
+            "service":
+                "clinical_note_from_image",
+
+            "message":
+                str(e)
+        }
+
+    finally:
+
+        if (
+            temp_file is not None
+            and
+            os.path.exists(
+                temp_file.name
+            )
+        ):
+
+            os.unlink(
+                temp_file.name
+            )
+
+            logger.info(
+                "Temporary image file deleted"
+            )

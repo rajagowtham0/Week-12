@@ -5,7 +5,7 @@ import re
 from utils.logger import logger
 
 
-# Extract structured clinical information from translated OCR text
+# Extract structured clinical information
 def generate_clinical_description(text):
 
     try:
@@ -25,119 +25,76 @@ def generate_clinical_description(text):
             "recommendations": []
         }
 
-        # Validate input text
         if not text:
-
-            logger.warning(
-                "Empty text received for clinical information extraction"
-            )
 
             return result
 
-        # Split text into lines
-        lines = text.split(
-            "\n"
+        # Normalize spaces
+        text = re.sub(
+            r"\s+",
+            " ",
+            text
+        ).strip()
+
+        # Patient Name
+        patient_match = re.search(
+            r"Patient\s*Name:\s*(.*?)\s*Diagnosis:",
+            text,
+            re.IGNORECASE
         )
 
-        for line in lines:
+        if patient_match:
 
-            clean_line = line.strip()
+            result["patient_name"] = (
+                patient_match.group(1).strip()
+            )
 
-            if not clean_line:
+        # Diagnosis
+        diagnosis_match = re.search(
+            r"Diagnosis:\s*(.*?)\s*Medications:",
+            text,
+            re.IGNORECASE
+        )
 
-                continue
+        if diagnosis_match:
 
-            lower_line = clean_line.lower()
+            result["diagnosis"] = (
+                diagnosis_match.group(1).strip()
+            )
 
-            # Extract Patient Name
-            if (
-                "patient name" in lower_line
-                or
-                lower_line.startswith("name:")
-            ):
+        # Medications
+        medication_match = re.search(
+            r"Medications:\s*(.*?)\s*Recommendations:",
+            text,
+            re.IGNORECASE
+        )
 
-                result["patient_name"] = re.sub(
-                    r"(?i)(patient\s*name\s*:|name\s*:)",
-                    "",
-                    clean_line
-                ).strip()
+        if medication_match:
 
-                continue
+            medications_text = (
+                medication_match.group(1).strip()
+            )
 
-            # Extract Diagnosis
-            if (
-                "diagnosis" in lower_line
-                or
-                "impression" in lower_line
-            ):
+            result["medications"] = [
+                medications_text
+            ]
 
-                result["diagnosis"] = re.sub(
-                    r"(?i)(diagnosis\s*:|impression\s*:)",
-                    "",
-                    clean_line
-                ).strip()
+        # Recommendations
+        recommendation_match = re.search(
+            r"Recommendations:\s*(.*)",
+            text,
+            re.IGNORECASE
+        )
 
-                continue
+        if recommendation_match:
 
-            # Extract Medications
-            if re.search(
+            recommendations_text = (
+                recommendation_match.group(1).strip()
+            )
 
-                r"\b("
-                r"tablet|tab|capsule|cap|syrup|"
-                r"inj|injection|cream|ointment|"
-                r"paracetamol|dolo|crocin|"
-                r"azithromycin|amoxicillin|"
-                r"cetirizine|ibuprofen|"
-                r"pantoprazole|omeprazole"
-                r")\b",
-
-                lower_line
-
-            ):
-
-                result[
-                    "medications"
-                ].append(
-                    clean_line
-                )
-
-                continue
-
-            # Extract Recommendations
-            if any(
-
-                keyword in lower_line
-
-                for keyword in [
-
-                    "recommendation",
-
-                    "recommended",
-
-                    "advice",
-
-                    "follow up",
-
-                    "review after",
-
-                    "consult",
-
-                    "take rest",
-
-                    "avoid",
-
-                    "drink plenty of water",
-
-                    "bed rest"
-                ]
-
-            ):
-
-                result[
-                    "recommendations"
-                ].append(
-                    clean_line
-                )
+            result["recommendations"] = [
+                recommendations_text
+            ]
 
         logger.info(
             "Clinical information extraction completed successfully"
