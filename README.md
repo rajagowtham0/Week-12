@@ -22,24 +22,18 @@ Multimodal_AI/
 ├── image_to_text_service/
 │   ├── ocr_engine.py
 │   ├── ocr_text_translation.py
-│   ├── clinical_note_generation.py
-│   └── ...
+│   ├── image_clinical_description.py
 │
 ├── voice_to_text_service/
 │   ├── whisper_engine.py
 │   ├── clinical_note_generation.py
 │   ├── voice_response.py
-│   └── ...
 │
 ├── models/
 │   ├── models.py
-│   └── ...
 │
 ├── utils/
 │   ├── logger.py
-│   └── ...
-│
-└── README.md
+│   └── config.py
 ```
 
----
