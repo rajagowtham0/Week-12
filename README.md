@@ -205,35 +205,6 @@ Before deploying the application, verify that:
 
 # Sample Requests and Responses
 
-## Voice-to-Clinical Note API
-
-### Sample Request
-
-```bash
-curl -X POST "http://localhost:8000/clinical_note_from_voice" \
--F "file=@patient_voice_recording.m4a"
-```
-
-### Sample Response
-
-```json
-{
-  "service": "clinical_note_from_voice",
-  "input_filename": "patient_voice_recording.m4a",
-  "clinical_note": {
-    "chief_complaint": "lower back pain",
-    "duration": "three week",
-    "symptoms": [
-      "radiating pain to left leg",
-      "pain aggravated by standing"
-    ],
-    "source": "voice"
-  }
-}
-```
-
-# Request and Response schema
-
 ## Image-to-Clinical Note API
 
 ### Sample Request
@@ -297,5 +268,96 @@ This standardized format simplifies integration with electronic health record (E
 
 ---
 
+# Architecture & Workflow Diagrams
+
+## 1. Voice-to-Clinical Note Workflow
+
+This workflow converts spoken clinical information into a structured clinical note through automatic speech recognition and clinical information extraction.
+
+```mermaid
+flowchart LR
+
+A[Audio File Upload] --> B[FastAPI Endpoint]
+B --> C[whisper_engine.py]
+C --> D[Speech-to-Text Transcription]
+D --> E[clinical_note_generation.py]
+E --> F[Clinical Information Extraction]
+F --> G[Structured Clinical Note]
+G --> H[JSON API Response]
+```
+
+### Workflow Description
+
+1. The user uploads an audio file through the API.
+2. The Whisper engine transcribes the speech into text.
+3. Clinical entities such as complaints, symptoms, and duration are extracted.
+4. A structured clinical note is generated.
+5. The API returns the clinical note as a JSON response.
+
+---
+
+## 2. Image-to-Clinical Note Workflow
+
+This workflow extracts clinical information from medical documents, prescriptions, or reports using OCR and clinical text processing.
+
+```mermaid
+flowchart LR
+
+A[Image Upload] --> B[FastAPI Endpoint]
+B --> C[ocr_engine.py]
+C --> D[OCR Text Extraction]
+D --> E[ocr_text_translation.py]
+E --> F[English Text Processing]
+F --> G[image_clinical_description.py]
+G --> H[Clinical Information Extraction]
+H --> I[Structured Clinical Note]
+I --> J[JSON API Response]
+```
+
+### Workflow Description
+
+1. The user uploads a medical image or prescription.
+2. OCR extracts text from the image.
+3. Non-English text is translated into English if required.
+4. Clinical entities such as diagnosis, medications, and recommendations are identified.
+5. A structured clinical note is generated.
+6. The API returns the extracted clinical information as a JSON response.
+
+---
+
+## System Architecture Overview
+
+```mermaid
+flowchart TB
+
+U[Client Application]
+
+U --> V[Voice-to-Clinical API]
+U --> I[Image-to-Clinical API]
+
+V --> W[Whisper Engine]
+W --> X[Clinical Note Generation]
+
+I --> Y[OCR Engine]
+Y --> Z[Translation Engine]
+Z --> A[Clinical Description Generation]
+
+X --> B[Structured Clinical Note]
+A --> B
+
+B --> C[JSON Response]
+```
+
+### Architecture Summary
+
+* **FastAPI** serves as the API layer and request handler.
+* **Whisper Engine** processes audio inputs and generates transcriptions.
+* **OCR Engine** extracts text from uploaded images.
+* **Translation Engine** converts multilingual text into English when required.
+* **Clinical Processing Modules** generate structured clinical notes from extracted content.
+* **JSON Responses** provide standardized outputs for downstream healthcare applications.
+
+```
+```
 
 
