@@ -30,13 +30,20 @@ from image_to_text_service.ocr_text_translation import (
     translate_to_english
 )
 
-# Import Pydantic response models
-from voice_to_text_service.voice_response import (
-    ClinicalNoteResponse
-)
 # Import Clinical Information Extraction service
 from image_to_text_service.image_clinical_description import (
     generate_clinical_description
+)
+
+# Import Models
+from models.models import (
+    AudioRequestSchema,
+    ImageRequestSchema,
+    ErrorResponse,
+    SpeechToTextResponse,
+    ClinicalNoteVoiceResponse,
+    OCRResponse,
+    ClinicalNoteFromImageResponse
 )
 
 # Create FastAPI application
@@ -45,23 +52,20 @@ app = FastAPI(
 )
 
 
-# Home Endpoint
-# Verifies that the API service is running successfully
 @app.get("/")
 def home():
 
-    logger.info(
-        "Home endpoint accessed"
-    )
+    logger.info("Home endpoint accessed")
 
     return {
         "message": "Multimodal CCMS_AI Services Running Successfully"
     }
 
 
-# Voice-to-Text Endpoint
-# Converts multilingual speech into text and English translation
-@app.post("/speech-to-text")
+@app.post(
+    "/speech-to-text",
+    response_model=SpeechToTextResponse
+)
 async def speech_to_text(
     file: UploadFile = File(...)
 ):
@@ -74,23 +78,12 @@ async def speech_to_text(
             f"Voice-to-Text request received: {file.filename}"
         )
 
-        # Supported audio formats
-        allowed_audio_formats = [
-            ".wav",
-            ".mp3",
-            ".m4a"
-        ]
-
-        # Extract uploaded file extension
-        file_extension = os.path.splitext(
+        if not AudioRequestSchema.validate_audio_file(
             file.filename
-        )[1].lower()
-
-        # Validate audio format
-        if file_extension not in allowed_audio_formats:
+        ):
 
             logger.warning(
-                f"Unsupported audio format: {file_extension}"
+                f"Unsupported audio format: {file.filename}"
             )
 
             return {
@@ -98,17 +91,18 @@ async def speech_to_text(
                 "message": "Unsupported audio format"
             }
 
-        # Create temporary audio file
+        file_extension = os.path.splitext(
+            file.filename
+        )[1].lower()
+
         temp_file = tempfile.NamedTemporaryFile(
             delete=False,
             suffix=file_extension,
             mode="wb"
         )
 
-        # Read uploaded audio file
         content = await file.read()
 
-        # Save audio into temporary file
         temp_file.write(content)
         temp_file.close()
 
@@ -116,7 +110,6 @@ async def speech_to_text(
             "Audio file saved successfully"
         )
 
-        # Perform speech transcription
         result = transcribe_audio(
             temp_file.name
         )
@@ -147,24 +140,21 @@ async def speech_to_text(
 
     finally:
 
-        if temp_file is not None:
+        if (
+            temp_file is not None
+            and os.path.exists(temp_file.name)
+        ):
 
-            if os.path.exists(temp_file.name):
+            os.unlink(temp_file.name)
 
-                os.unlink(
-                    temp_file.name
-                )
-
-                logger.info(
-                    "Temporary audio file deleted"
-                )
+            logger.info(
+                "Temporary audio file deleted"
+            )
 
 
-# Clinical Note Generation Endpoint
-# Converts multilingual voice input into structured clinical notes
 @app.post(
     "/clinical-note-from-voice",
-    response_model=ClinicalNoteResponse
+    response_model=ClinicalNoteVoiceResponse
 )
 async def clinical_note_from_voice(
     file: UploadFile = File(...)
@@ -178,29 +168,24 @@ async def clinical_note_from_voice(
             f"Clinical Note request received: {file.filename}"
         )
 
-        # Supported audio formats
-        allowed_audio_formats = [
-            ".wav",
-            ".mp3",
-            ".m4a"
-        ]
-
-        file_extension = os.path.splitext(
+        if not AudioRequestSchema.validate_audio_file(
             file.filename
-        )[1].lower()
-
-        if file_extension not in allowed_audio_formats:
+        ):
 
             logger.warning(
-                f"Unsupported audio format: {file_extension}"
+                f"Unsupported audio format: {file.filename}"
             )
 
-            return ClinicalNoteResponse(
+            return ClinicalNoteVoiceResponse(
                 chief_complaint="",
                 duration="",
                 symptoms=[],
                 source="voice"
             )
+
+        file_extension = os.path.splitext(
+            file.filename
+        )[1].lower()
 
         temp_file = tempfile.NamedTemporaryFile(
             delete=False,
@@ -237,7 +222,7 @@ async def clinical_note_from_voice(
             f"Clinical Note generation error: {str(e)}"
         )
 
-        return ClinicalNoteResponse(
+        return ClinicalNoteVoiceResponse(
             chief_complaint="",
             duration="",
             symptoms=[],
@@ -246,22 +231,22 @@ async def clinical_note_from_voice(
 
     finally:
 
-        if temp_file is not None:
+        if (
+            temp_file is not None
+            and os.path.exists(temp_file.name)
+        ):
 
-            if os.path.exists(temp_file.name):
+            os.unlink(temp_file.name)
 
-                os.unlink(
-                    temp_file.name
-                )
-
-                logger.info(
-                    "Temporary audio file deleted"
-                )
+            logger.info(
+                "Temporary audio file deleted"
+            )
 
 
-# OCR Endpoint
-# Extracts text from uploaded images and clinical documents
-@app.post("/ocr")
+@app.post(
+    "/ocr",
+    response_model=OCRResponse
+)
 async def ocr_extraction(
     file: UploadFile = File(...)
 ):
@@ -274,26 +259,22 @@ async def ocr_extraction(
             f"OCR request received: {file.filename}"
         )
 
-        allowed_image_formats = [
-            ".png",
-            ".jpg",
-            ".jpeg"
-        ]
-
-        file_extension = os.path.splitext(
+        if not ImageRequestSchema.validate_image_file(
             file.filename
-        )[1].lower()
-
-        if file_extension not in allowed_image_formats:
+        ):
 
             logger.warning(
-                f"Unsupported image format: {file_extension}"
+                f"Unsupported image format: {file.filename}"
             )
 
             return {
                 "status": "error",
                 "message": "Unsupported image format"
             }
+
+        file_extension = os.path.splitext(
+            file.filename
+        )[1].lower()
 
         temp_file = tempfile.NamedTemporaryFile(
             delete=False,
@@ -306,26 +287,12 @@ async def ocr_extraction(
         temp_file.write(content)
         temp_file.close()
 
-        logger.info(
-            "Image file saved successfully"
-        )
-
-        # Extract text using OCR
         extracted_text = extract_text(
             temp_file.name
         )
 
-        # Translate OCR text to English
         english_translation = translate_to_english(
             extracted_text["text"]
-        )
-
-        logger.info(
-            "OCR extraction completed successfully"
-        )
-
-        logger.info(
-            "OCR translation completed successfully"
         )
 
         return {
@@ -352,21 +319,18 @@ async def ocr_extraction(
 
     finally:
 
-        if temp_file is not None:
+        if (
+            temp_file is not None
+            and os.path.exists(temp_file.name)
+        ):
 
-            if os.path.exists(temp_file.name):
+            os.unlink(temp_file.name)
 
-                os.unlink(
-                    temp_file.name
-                )
 
-                logger.info(
-                    "Temporary image file deleted"
-                )
-# Clinical Note From Image Endpoint
-# Extracts structured clinical information from scanned documents
-
-@app.post("/clinical-note-from-image")
+@app.post(
+    "/clinical-note-from-image",
+    response_model=ClinicalNoteFromImageResponse
+)
 async def clinical_note_from_image(
     file: UploadFile = File(...)
 ):
@@ -379,90 +343,50 @@ async def clinical_note_from_image(
             f"Clinical Note From Image request received: {file.filename}"
         )
 
-        # Supported image formats
-        allowed_image_formats = [
-            ".png",
-            ".jpg",
-            ".jpeg"
-        ]
+        if not ImageRequestSchema.validate_image_file(
+            file.filename
+        ):
 
-        # Extract uploaded image extension
+            logger.warning(
+                f"Unsupported image format: {file.filename}"
+            )
+
+            return {
+                "status": "error",
+                "message": "Unsupported image format"
+            }
+
         file_extension = os.path.splitext(
             file.filename
         )[1].lower()
 
-        # Validate image format
-        if file_extension not in allowed_image_formats:
-
-            logger.warning(
-                f"Unsupported image format: {file_extension}"
-            )
-
-            return {
-
-                "status": "error",
-
-                "message":
-                    "Unsupported image format"
-            }
-
-        # Create temporary image file
         temp_file = tempfile.NamedTemporaryFile(
             delete=False,
             suffix=file_extension,
             mode="wb"
         )
 
-        # Read uploaded image
         content = await file.read()
 
-        # Save image into temporary file
-        temp_file.write(
-            content
-        )
-
+        temp_file.write(content)
         temp_file.close()
 
-        logger.info(
-            "Image file saved successfully"
-        )
-
-        # OCR Extraction
         extracted_text = extract_text(
             temp_file.name
         )
 
-        # Translation
-        english_translation = (
-            translate_to_english(
-                extracted_text.get(
-                    "text",
-                    ""
-                )
-            )
+        english_translation = translate_to_english(
+            extracted_text.get("text", "")
         )
 
-        # Clinical Information Extraction
-        clinical_note = (
-            generate_clinical_description(
-                english_translation
-            )
-        )
-
-        logger.info(
-            "Clinical note generated successfully from image"
+        clinical_note = generate_clinical_description(
+            english_translation
         )
 
         return {
-
-            "service":
-                "clinical_note_from_image",
-
-            "input_filename":
-                file.filename,
-
-            "clinical_note":
-                clinical_note
+            "service": "clinical_note_from_image",
+            "input_filename": file.filename,
+            "clinical_note": clinical_note
         }
 
     except Exception as e:
@@ -472,30 +396,19 @@ async def clinical_note_from_image(
         )
 
         return {
-
-            "status":
-                "error",
-
-            "service":
-                "clinical_note_from_image",
-
-            "message":
-                str(e)
+            "status": "error",
+            "service": "clinical_note_from_image",
+            "message": str(e)
         }
 
     finally:
 
         if (
             temp_file is not None
-            and
-            os.path.exists(
-                temp_file.name
-            )
+            and os.path.exists(temp_file.name)
         ):
 
-            os.unlink(
-                temp_file.name
-            )
+            os.unlink(temp_file.name)
 
             logger.info(
                 "Temporary image file deleted"
