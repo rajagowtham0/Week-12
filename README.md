@@ -147,12 +147,48 @@ and converts them into a structured clinical note.
 
 This project requires Python, FFmpeg, and Tesseract OCR to support multimodal processing, including speech transcription, optical character recognition (OCR), translation, and clinical note generation.
 
+---
+
 ## Prerequisites
 
 Before installing the application, ensure the following software is available on your system:
 
-Python 3.10 or higher
-FFmpeg (for audio processing and Whisper transcription)
-Tesseract OCR (for image text extraction)
+- Python 3.10 or higher
+- FFmpeg (for audio processing and Whisper transcription)
+- Tesseract OCR (for image text extraction)
+
+---
+
+## Install dependencies
+
+Install all required Python packages using the provided requirements file.
+
+pip install -r requirements.txt
+
+---
+
+## Configure External dependencies
+
+
+The application depends on FFmpeg and Tesseract OCR. Update the installation paths in utils/config.py according to your local environment.
+
+- FFMPEG_PATH = r"C:\ffmpeg\bin"
+- TESSERACT_PATH = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+---
+
+## Launch the Application
+
+Start the FastAPI server using Uvicorn.
+
+uvicorn app:app --reload
+
+Once the server starts successfully, the application will be accessible at:
+
+- Application URL: http://localhost:8000
+- Swagger Documentation: http://localhost:8000/docs
+
+---
+
 
 
