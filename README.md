@@ -203,5 +203,99 @@ Before deploying the application, verify that:
 
 ---
 
+# Sample Requests and Responses
+
+## Voice-to-Clinical Note API
+
+### Sample Request
+
+```bash
+curl -X POST "http://localhost:8000/clinical_note_from_voice" \
+-F "file=@patient_voice_recording.m4a"
+```
+
+### Sample Response
+
+```json
+{
+  "service": "clinical_note_from_voice",
+  "input_filename": "patient_voice_recording.m4a",
+  "clinical_note": {
+    "chief_complaint": "lower back pain",
+    "duration": "three week",
+    "symptoms": [
+      "radiating pain to left leg",
+      "pain aggravated by standing"
+    ],
+    "source": "voice"
+  }
+}
+```
+
+# Request and Response schema
+
+## Image-to-Clinical Note API
+
+### Sample Request
+
+```bash
+curl -X POST "http://localhost:8000/clinical_note_from_image" \
+-F "file=@prescription.png"
+```
+You can upload any images with the text, based on the format given below: 
+
+- jpeg
+- jpg
+- png
+---
+
+### Sample Response
+
+```json
+{
+  "service": "clinical_note_from_image",
+  "input_filename": "Screenshot 2026-06-08 104012.png",
+  "clinical_note": {
+    "patient_name": "Ravi Kumar",
+    "diagnosis": "Cervical Spondylosis",
+    "medications": [
+      "Tablet Paracetamol 656 mg"
+    ],
+    "recommendations": [
+      "Neck Isometric Exercise Cervical Stretching Exercise Hot Fomentation Twice Daily Avoid Prolonged Mobile Usage Maintain Proper Sitting Posture Review After 1 Week"
+    ]
+  }
+}
+```
+
+### Description
+
+The API extracts text from the uploaded medical document using OCR, analyzes the clinical content, and generates a structured clinical note containing patient information, diagnosis, medications, and treatment recommendations.
+
+---
+
+## voice-to-Clinical Note API
+
+### Sample Request
+
+
+```bash
+curl -X POST "http://localhost:8000/clinical_note_from_voice" \
+-F "file=@patient_audio.m4a"
+```
+
+
+### Sample Response
+
+```json
+
+{ "service": "clinical_note_from_voice", "input_filename": "patient_voice_recording.m4a", "clinical_note": { "chief_complaint": "lower back pain", "duration": "three week", "symptoms": [ "radiating pain to left leg", "pain aggravated by standing" ], "source": "voice" } }
+```
+
+
+This standardized format simplifies integration with electronic health record (EHR) systems, clinical workflows, and downstream healthcare applications.
+
+---
+
 
 
