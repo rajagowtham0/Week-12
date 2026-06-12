@@ -95,3 +95,64 @@ Implements centralized logging for application monitoring and debugging. Records
 
 Stores application configurations, constants, and environment-specific settings. Centralizes configurable parameters used across services. Simplifies deployment and maintenance.
 
+# Features
+
+## Voice-to-Text Clinical Documentation
+
+- Upload audio files
+- Speech transcription using Whisper
+- Clinical entity extraction
+- Structured note generation
+
+Supported Audio Formats:
+
+- WAV
+- MP3
+- M4A
+- FLAC
+
+---
+
+## Image-to-Text Clinical Documentation
+
+- Upload medical prescriptions
+- Upload handwritten notes
+- OCR text extraction
+- Translation support
+- Clinical note generation
+
+Supported Image Formats:
+
+- JPG
+- JPEG
+- PNG
+
+---
+
+## Clinical Note Generation
+
+The system automatically extracts:
+
+- Patient Name
+- Chief Complaint
+- Diagnosis
+- Medications
+- Recommendations
+
+and converts them into a structured clinical note.
+
+---
+
+# Installation Guide
+
+This project requires Python, FFmpeg, and Tesseract OCR to support multimodal processing, including speech transcription, optical character recognition (OCR), translation, and clinical note generation.
+
+## Prerequisites
+
+Before installing the application, ensure the following software is available on your system:
+
+Python 3.10 or higher
+FFmpeg (for audio processing and Whisper transcription)
+Tesseract OCR (for image text extraction)
+
+
