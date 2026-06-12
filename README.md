@@ -327,26 +327,33 @@ I --> J[JSON API Response]
 
 ## System Architecture Overview
 
+## End-to-End Multimodal Clinical Documentation Workflow
+
 ```mermaid
 flowchart TB
 
-U[Client Application]
+    A[Client Application]
 
-U --> V[Voice-to-Clinical API]
-U --> I[Image-to-Clinical API]
+    A --> B[Voice-to-Clinical API]
+    A --> C[Image-to-Clinical API]
 
-V --> W[Whisper Engine]
-W --> X[Clinical Note Generation]
+    %% Voice Flow
+    B --> D[Whisper Speech Recognition]
+    D --> E[Translation Service]
+    E --> F[Clinical Information Extraction]
 
-I --> Y[OCR Engine]
-Y --> Z[Translation Engine]
-Z --> A[Clinical Description Generation]
+    %% Image Flow
+    C --> G[OCR Text Extraction]
+    G --> H[Translation Service]
+    H --> I[Clinical Information Extraction]
 
-X --> B[Structured Clinical Note]
-A --> B
+    %% Common Output
+    F --> J[Structured Clinical Note]
+    I --> J
 
-B --> C[JSON Response]
+    J --> K[JSON API Response]
 ```
+
 
 ### Architecture Summary
 
