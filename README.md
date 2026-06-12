@@ -190,5 +190,18 @@ Once the server starts successfully, the application will be accessible at:
 
 ---
 
+## Pre-Deployment Checklist
+
+Before deploying the application, verify that:
+
+- All required Python dependencies are installed.
+- FFmpeg is installed and correctly configured.
+- Tesseract OCR is installed and correctly configured.
+- Paths in utils/config.py are updated appropriately.
+- All API endpoints are tested and functioning as expected.
+- Application logs are being generated successfully.
+
+---
+
 
 
